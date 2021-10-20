@@ -1,3 +1,2 @@
 ## CloudFormation manifest of all the file locations
-https://raw.githubusercontent.com/scunning1987/hls_vod_linearizer/main/hls_vod_linearizer.py
-https://raw.githubusercontent.com/scunning1987/hls_vod_linearizer/main/vod-content-ingest.py
+https://raw.githubusercontent.com/scunning1987/ads_reference_server/main/ads-reference-server.py
