@@ -66,3 +66,33 @@ The server will return a VAST response like so:
 
 Once the solution is deployed via CloudFormation, open the "ads_reference_server" Lambda function and modify the `avaiable_ads` dictionary object to use your ad files.
 
+This is an example of what the dictionary object looks like and the type of data you need to populate:
+
+```
+{
+  "1": {
+    "duration_s": 15,
+    "location": "https://1234567890.cloudfront.net/Media/Bumpers/AD-caribbean-15-HD.mp4",
+    "mediafile_name": "AD-caribbean-15-HD",
+    "mediafile_id": "00001"
+  },
+  "2": {
+    "duration_s": 15,
+    "location": "https://1234567890.cloudfront.net/Media/Bumpers/AD-caribbean2-15-HD.mp4",
+    "mediafile_name": "AD-caribbean2-15",
+    "mediafile_id": "00002"
+  },
+  "3": {
+    "duration_s": 15,
+    "location": "https://1234567890.cloudfront.net/Media/Bumpers/AD-carracing-15-HD.mp4",
+    "mediafile_name": "AD-carracing-15",
+    "mediafile_id": "00003"
+  },
+  "4": {
+    "duration_s": 15,
+    "location": "https://1234567890.cloudfront.net/Media/Bumpers/AD-music-15-HD.mp4",
+    "mediafile_name": "AD-music-15",
+    "mediafile_id": "00004"
+  }
+}
+```
