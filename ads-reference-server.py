@@ -32,6 +32,21 @@ def lambda_handler(event, context):
 
     default_ad_duration = 30 # Value to use if no duration is sent in the VAST request
 
+    # modify the below entries to point to your media. Specify the duration of each asset in seconds
+    avaiable_ads = dict()
+    avaiable_ads["1"] = {"duration_s":15,"location":"https://d3re4i3vgppvr8.cloudfront.net/Media/Bumpers/AD-caribbean-15-HD.mp4","mediafile_name":"AD-caribbean-15-HD","mediafile_id":"00001"}
+    avaiable_ads["2"] = {"duration_s":15,"location":"https://d3re4i3vgppvr8.cloudfront.net/Media/Bumpers/AD-caribbean2-15-HD.mp4","mediafile_name":"AD-caribbean2-15","mediafile_id":"00002"}
+    avaiable_ads["3"] = {"duration_s":15,"location":"https://d3re4i3vgppvr8.cloudfront.net/Media/Bumpers/AD-carracing-15-HD.mp4","mediafile_name":"AD-carracing-15","mediafile_id":"00003"}
+    avaiable_ads["4"] = {"duration_s":15,"location":"https://d3re4i3vgppvr8.cloudfront.net/Media/Bumpers/AD-music-15-HD.mp4","mediafile_name":"AD-music-15","mediafile_id":"00004"}
+    avaiable_ads["5"] = {"duration_s":15,"location":"https://d3re4i3vgppvr8.cloudfront.net/Media/Bumpers/AD-perfume-15-HD.mp4","mediafile_name":"AD-perfume-15","mediafile_id":"00005"}
+    avaiable_ads["6"] = {"duration_s":15,"location":"https://d3re4i3vgppvr8.cloudfront.net/Media/Bumpers/AD-polarbear-15-HD.mp4","mediafile_name":"AD-polarbear-15","mediafile_id":"00006"}
+    avaiable_ads["7"] = {"duration_s":15,"location":"https://d3re4i3vgppvr8.cloudfront.net/Media/Bumpers/AD-robots-15-HD.mp4","mediafile_name":"AD-robots-15","mediafile_id":"00007"}
+    avaiable_ads["8"] = {"duration_s":15,"location":"https://d3re4i3vgppvr8.cloudfront.net/Media/Bumpers/AD-skiing-15-HD.mp4","mediafile_name":"AD-skiing-15","mediafile_id":"00008"}
+    avaiable_ads["9"] = {"duration_s":15,"location":"https://d3re4i3vgppvr8.cloudfront.net/Media/Bumpers/AD-sports-15-HD.mp4","mediafile_name":"AD-sports-15","mediafile_id":"00009"}
+    avaiable_ads["10"] = {"duration_s":15,"location":"https://d3re4i3vgppvr8.cloudfront.net/Media/Bumpers/AWSElemental_commerical_break_15s-HD.mp4","mediafile_name":"AWSElemental_commerical_break_15","mediafile_id":"00010"}
+    avaiable_ads["11"] = {"duration_s":30,"location":"https://d3re4i3vgppvr8.cloudfront.net/Media/Bumpers/rugby-30-HD.mp4","mediafile_name":"rugby-30","mediafile_id":"00011"}
+
+
     if event['path'] == "/ads":
 
         vast_req_duration = 0
@@ -49,20 +64,6 @@ def lambda_handler(event, context):
 
         else:
             vast_req_duration = default_ad_duration
-
-
-        avaiable_ads = dict()
-        avaiable_ads["1"] = {"duration_s":15,"location":"https://d3re4i3vgppvr8.cloudfront.net/Media/Bumpers/AD-caribbean-15-HD.mp4","mediafile_name":"AD-caribbean-15-HD","mediafile_id":"00001"}
-        avaiable_ads["2"] = {"duration_s":15,"location":"https://d3re4i3vgppvr8.cloudfront.net/Media/Bumpers/AD-caribbean2-15-HD.mp4","mediafile_name":"AD-caribbean2-15","mediafile_id":"00002"}
-        avaiable_ads["3"] = {"duration_s":15,"location":"https://d3re4i3vgppvr8.cloudfront.net/Media/Bumpers/AD-carracing-15-HD.mp4","mediafile_name":"AD-carracing-15","mediafile_id":"00003"}
-        avaiable_ads["4"] = {"duration_s":15,"location":"https://d3re4i3vgppvr8.cloudfront.net/Media/Bumpers/AD-music-15-HD.mp4","mediafile_name":"AD-music-15","mediafile_id":"00004"}
-        avaiable_ads["5"] = {"duration_s":15,"location":"https://d3re4i3vgppvr8.cloudfront.net/Media/Bumpers/AD-perfume-15-HD.mp4","mediafile_name":"AD-perfume-15","mediafile_id":"00005"}
-        avaiable_ads["6"] = {"duration_s":15,"location":"https://d3re4i3vgppvr8.cloudfront.net/Media/Bumpers/AD-polarbear-15-HD.mp4","mediafile_name":"AD-polarbear-15","mediafile_id":"00006"}
-        avaiable_ads["7"] = {"duration_s":15,"location":"https://d3re4i3vgppvr8.cloudfront.net/Media/Bumpers/AD-robots-15-HD.mp4","mediafile_name":"AD-robots-15","mediafile_id":"00007"}
-        avaiable_ads["8"] = {"duration_s":15,"location":"https://d3re4i3vgppvr8.cloudfront.net/Media/Bumpers/AD-skiing-15-HD.mp4","mediafile_name":"AD-skiing-15","mediafile_id":"00008"}
-        avaiable_ads["9"] = {"duration_s":15,"location":"https://d3re4i3vgppvr8.cloudfront.net/Media/Bumpers/AD-sports-15-HD.mp4","mediafile_name":"AD-sports-15","mediafile_id":"00009"}
-        avaiable_ads["10"] = {"duration_s":15,"location":"https://d3re4i3vgppvr8.cloudfront.net/Media/Bumpers/AWSElemental_commerical_break_15s-HD.mp4","mediafile_name":"AWSElemental_commerical_break_15","mediafile_id":"00010"}
-        avaiable_ads["11"] = {"duration_s":30,"location":"https://d3re4i3vgppvr8.cloudfront.net/Media/Bumpers/rugby-30-HD.mp4","mediafile_name":"rugby-30","mediafile_id":"00011"}
 
         cumulative_duration = 0
         ad_list = []
