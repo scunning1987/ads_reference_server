@@ -1,0 +1,446 @@
+#### Title : ADS Reference Server
+#### Author : Scott Cunningham
+####
+####
+
+## Parameters - User Input
+#Parameters:
+#
+#  Placeholder:
+#    Description: placeholder for now...
+#    Type: String
+#    Default: placeholder
+
+## Resources
+Resources:
+
+  #################
+  ## S3
+  #################
+  # S3 Bucket to host code
+  S3Bucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+      Tags:
+        - Key: StackName
+          Value: !Ref AWS::StackName
+
+  #################
+  ## IAM & Permissions
+  #################
+  ## IAM Role
+  LambdaRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service:
+                - lambda.amazonaws.com
+            Action:
+              - sts:AssumeRole
+      Tags:
+        - Key: StackName
+          Value: !Ref AWS::StackName
+
+  ## IAM Policy
+  LambdaBasicExecutionPolicy:
+    Type: AWS::IAM::Policy
+    Properties:
+      Roles:
+        - !Ref LambdaRole
+      PolicyName: !Sub ${AWS::StackName}-s3-access
+      PolicyDocument:
+        Statement:
+          - Effect: Allow
+            Action:
+              - logs:CreateLogGroup
+            Resource:
+              - !Sub arn:aws:logs:${AWS::Region}:${AWS::AccountId}:*
+          - Effect: Allow
+            Action:
+              - logs:CreateLogStream
+              - logs:PutLogEvents
+            Resource:
+              - !Sub arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/*
+
+  LambdaInvokePermissionVAST:
+    Type: AWS::Lambda::Permission
+    Properties:
+      FunctionName: !GetAtt VastProcessor.Arn
+      Action: lambda:InvokeFunction
+      Principal: apigateway.amazonaws.com
+      SourceArn: !Sub "arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${ApiGateway}/*/*/*"
+    DependsOn:
+      - VastProcessor
+
+
+  #################
+  ## Custom Resource
+  #################
+
+  FileMover:
+    Type: Custom::LambdaInvokerToMoveFiles
+    Properties:
+      ServiceToken: !GetAtt FileCopier.Arn
+      Region: !Ref 'AWS::Region'
+    DependsOn:
+      - LambdaRole
+
+  #################
+  ## Lambda
+  #################
+
+  VastProcessor:
+    Type: AWS::Lambda::Function
+    Properties:
+      Description: Lambda to handle VAST requests and build dynamic responses
+      Role: !GetAtt LambdaRole.Arn
+      Runtime: python3.8
+      Handler: index.lambda_handler
+      Timeout: 10
+      MemorySize: 10240
+      Layers:
+        - !Ref LambdaLayerXMLtoDict
+      Code:
+        S3Bucket: !Ref S3Bucket
+        S3Key: !GetAtt FileMover.ads-reference-server
+      Tags:
+        - Key: StackName
+          Value: !Ref AWS::StackName
+    DependsOn:
+      - S3Bucket
+      - LambdaRole
+      - LambdaLayerXMLtoDict
+
+  FileCopier:
+    Type: AWS::Lambda::Function
+    Properties:
+      Description: Lambda function to copy solution files to destination bucket
+      Role: !GetAtt LambdaRole.Arn
+      Runtime: python3.8
+      Handler: index.lambda_handler
+      Timeout: 35
+      MemorySize: 10240
+      Code:
+        ZipFile: |
+          '''
+          Copyright (c) 2021 Scott Cunningham
+
+          Permission is hereby granted, free of charge, to any person obtaining a copy
+          of this software and associated documentation files (the "Software"), to deal
+          in the Software without restriction, including without limitation the rights
+          to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+          copies of the Software, and to permit persons to whom the Software is
+          furnished to do so, subject to the following conditions:
+
+          The above copyright notice and this permission notice shall be included in all
+          copies or substantial portions of the Software.
+
+          THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+          IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+          FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+          AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+          LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+          OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+          SOFTWARE.
+
+          Summary: This script is a custom resource to place the HTML pages and Lambda code into the destination bucket.
+
+          Original Author: Scott Cunningham
+          '''
+
+          import json
+          import logging
+          import boto3
+          import os
+          import urllib3
+          from urllib.parse import urlparse
+          from zipfile import ZipFile
+          import cfnresponse
+
+          LOGGER = logging.getLogger()
+          LOGGER.setLevel(logging.INFO)
+          MANIFESTMODIFY="True"
+
+          version = 2
+
+          def lambda_handler(event, context):
+
+              ## Log the incoming event
+              LOGGER.info("Event : %s " % (event))
+
+              ## Create Response Data Dictionary for the CloudFormationn response
+              responseData = dict()
+
+              ## Initialize S3 boto3 client
+              s3 = boto3.client('s3')
+
+              # Create urllib3 pool manager
+              http = urllib3.PoolManager()
+
+              # Manifest File containning URL's on github
+              cloudformation_manifest = "https://raw.githubusercontent.com/scunning1987/pois_reference_server/main/manifest.txt"
+
+              # Pull global env variable to variable
+              bucket = os.environ['BUCKET']
+
+              # Get the manifest from GitHub
+              get_response = http.request('GET', cloudformation_manifest)
+
+              if get_response.status != 200:
+                  # Exit the script with errors
+                  responseData['Status'] = "Unable to get file from location : %s " % (file)
+                  cfnresponse.send(event, context, "FAILED",responseData)
+                  raise Exception("Unable to get file from location : %s " % (file))
+              else:
+                  # Continue and upload to S3
+                  manifest_list = get_response.data.decode("utf-8").split("\n")
+
+              # remove manifest.txt header line
+              manifest_list.pop(0)
+
+              LOGGER.info("Files to transfer to S3: %s " % (manifest_list))
+
+              for file in manifest_list:
+
+                  # Get the file from GitHub
+                  if "http" in file:
+                      get_response = http.request('GET', file)
+
+                  if get_response.status != 200:
+                      # Exit the script with errors
+                      responseData['Status'] = "Unable to get file from location : %s " % (file)
+                      cfnresponse.send(event, context, "FAILED",responseData)
+                      raise Exception("Unable to get file from location : %s " % (file))
+                  elif "http" in file:
+
+                      # Continue and upload to S3
+
+                      # url string to urllib object
+                      file_url_formatted = urlparse(file)
+                      file_url_path = file_url_formatted.path
+
+                      # get path after github repo owner name - use this as the path to write to s3
+                      path = '/'.join(file_url_path.split("/")[2:]).rsplit("/",1)[0]
+                      s3_data = get_response.data
+
+
+                      file_name = file.rsplit("/",1)[1]
+                      file_base_name = os.path.splitext(file_name)[0]
+                      s3_key = "%s/%s" % (path,file_name)
+
+                      content_type = ""
+                      if ".html" in file_name:
+                          content_type = "text/html"
+                      elif ".css" in file_name:
+                          content_type = "text/css"
+                      elif ".js" in file_name:
+                          content_type = "text/javascript"
+                      elif ".json" in file_name:
+                          content_type = "application/json"
+                      elif ".zip" in file_name: # this is the zip
+                          content_type = "application/zip"
+                          s3_key = path + file_name
+                      elif ".py" in file_name:
+                          # write python file to zip,
+                          python_file = open("/tmp/"+file_name,"w")
+                          python_file.write(get_response.data.decode("utf-8"))
+                          python_file.close()
+
+                          # Zip the file
+                          LOGGER.info("Zipping the file : %s " % ("/tmp/"+file_name))
+                          zipObj = ZipFile('/tmp/'+file_name.replace(".py",".zip"), 'w')
+                          # Add file to the zip
+                          zipObj.write('/tmp/'+file_name,"index.py")
+                          # close the Zip File
+                          zipObj.close()
+                          LOGGER.info("Finished zipping file")
+
+                          content_type = "application/zip"
+                          s3_data = open("/tmp/"+file_name.replace(".py",".zip"), 'rb')
+                          s3_key = s3_key.replace(".py",".zip")
+
+                      # "RequestType": "Create"
+                      if event['RequestType'] == "Create" or event['RequestType'] == "Update":
+                          # Upload to S3
+                          LOGGER.info("Now uploading %s to S3, Bucket: %s , path: %s" % (file_name,bucket,s3_key))
+                          try:
+                              s3_response = s3.put_object(Body=s3_data, Bucket=bucket, Key=s3_key,ContentType=content_type, CacheControl='no-cache', ACL='public-read')
+                              LOGGER.info("Uploaded %s to S3, got response : %s " % (file_name,s3_response) )
+                              responseData[file_base_name] = s3_key
+                          except Exception as e:
+                              LOGGER.error("Unable to upload %s to S3, got exception: %s" % (file_name,e))
+                              responseData['Status'] = "Unable to upload %s to S3, got exception: %s" % (file_name,e)
+                              cfnresponse.send(event, context, "FAILED",responseData)
+                              raise Exception("Unable to upload %s to S3, got exception: %s" % (file_name,e))
+
+                      else: # DELETE
+                          try:
+                              s3_response = s3.delete_object(Bucket=bucket,Key=s3_key)
+                              LOGGER.info("Deleted %s from S3, got response : %s " % (file_name,s3_response) )
+                          except Exception as e:
+                              LOGGER.error("Unable to delete %s from S3, got exception: %s" % (file_name,e))
+                              responseData['Status'] = "Unable to delete %s from S3, got exception: %s" % (file_name,e)
+                              cfnresponse.send(event, context, "FAILED",responseData)
+                  else:
+                      LOGGER.info("Got line in manifest.txt that isn't a URL: %s " % (file))
+              responseData['Status'] = "SUCCESS"
+              cfnresponse.send(event, context, "SUCCESS",responseData)
+              return responseData
+
+      Environment:
+        Variables:
+          BUCKET: !Ref S3Bucket
+      Tags:
+        - Key: StackName
+          Value: !Ref AWS::StackName
+    DependsOn:
+      - S3Bucket
+      - LambdaRole
+      - LambdaBasicExecutionPolicy
+
+  LambdaLayerXMLtoDict:
+    Type: AWS::Lambda::LayerVersion
+    Properties:
+      Description: Lambda Layer containing Python library XMLtoDict - XML Parser
+      CompatibleRuntimes:
+        - python3.8
+      Content:
+        S3Bucket: !Ref S3Bucket
+        S3Key: !GetAtt FileMover.xmltodict
+      LayerName: xmltodictlibrary
+      LicenseInfo: https://raw.githubusercontent.com/martinblech/xmltodict/master/LICENSE
+
+    #################
+    ## API Gateway
+    #################
+
+  ApiGateway:
+    Type: AWS::ApiGateway::RestApi
+    Properties:
+      Name: ADSReferenceServerAPI
+      Description: API for ADS VAST Interactions
+      EndpointConfiguration:
+        Types:
+          - REGIONAL
+      Tags:
+        - Key: StackName
+          Value: !Ref AWS::StackName
+
+  ProxyPlusResourceADS:
+    Type: AWS::ApiGateway::Resource
+    Properties:
+      ParentId: !GetAtt ApiGateway.RootResourceId
+      PathPart: '{proxy+}'
+      RestApiId: !Ref ApiGateway
+    DependsOn:
+      - ApiGateway
+
+  ADSResourceMethodAny:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      AuthorizationType: NONE
+      HttpMethod: ANY
+      Integration:
+        IntegrationHttpMethod: POST
+        IntegrationResponses:
+          - StatusCode: '200'
+        Type: AWS_PROXY
+        Uri: !Join
+          - ''
+          - - 'arn:aws:apigateway:'
+            - !Ref 'AWS::Region'
+            - :lambda:path/2015-03-31/functions/
+            - !GetAtt VastProcessor.Arn
+            - /invocations
+      MethodResponses:
+        - StatusCode: 200
+          ResponseModels:
+            application/json: !Ref EmptyApiModel
+      ResourceId: !Ref ProxyPlusResourceADS
+      RestApiId: !Ref ApiGateway
+    DependsOn:
+      - ApiGateway
+
+  OptionsForCors:
+    Type: AWS::ApiGateway::Method
+    Properties:
+      AuthorizationType: NONE
+      HttpMethod: OPTIONS
+      Integration:
+        IntegrationResponses:
+          - StatusCode: 200
+            ResponseParameters:
+              method.response.header.Access-Control-Allow-Headers: "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token'"
+              method.response.header.Access-Control-Allow-Methods: "'GET,PUT,OPTIONS'"
+              method.response.header.Access-Control-Allow-Origin: "'*'"
+            ResponseTemplates:
+              application/json: ''
+        PassthroughBehavior: WHEN_NO_MATCH
+        RequestTemplates:
+          application/json: '{"statusCode": 200}'
+        Type: MOCK
+      MethodResponses:
+        - StatusCode: 200
+          ResponseModels:
+            application/json: 'Empty'
+          ResponseParameters:
+            method.response.header.Access-Control-Allow-Headers: false
+            method.response.header.Access-Control-Allow-Methods: false
+            method.response.header.Access-Control-Allow-Origin: true
+      ResourceId: !Ref ProxyPlusResourceADS
+      RestApiId: !Ref ApiGateway
+    DependsOn:
+      - ApiGateway
+
+  EmptyApiModel:
+    Type: AWS::ApiGateway::Model
+    Properties:
+      ContentType: application/xml
+      Description: This is a default empty schema model
+      RestApiId: !Ref ApiGateway
+      Schema: {
+        "$schema": "http://json-schema.org/draft-04/schema#",
+        "title": "Empty Schema",
+        "type": "object"
+      }
+
+  Deployment:
+    Type: AWS::ApiGateway::Deployment
+    Properties:
+      Description: Production Deployment of Api Endpoint
+      RestApiId: !Ref ApiGateway
+    DependsOn:
+      - ApiGateway
+      - ADSResourceMethodAny
+      - ProxyPlusResourceADS
+
+  ApiStage:
+    Type: AWS::ApiGateway::Stage
+    Properties:
+      DeploymentId: !Ref Deployment
+      RestApiId: !Ref ApiGateway
+      StageName: v1
+      MethodSettings:
+        - HttpMethod: '*'
+          ResourcePath: '/*'
+          LoggingLevel: INFO
+          DataTraceEnabled: True
+    DependsOn:
+      - ApiGateway
+
+#################################
+# Outputs
+#################################
+
+Outputs:
+  ADSVASTURL:
+    Description: This is the endpoint to configure as your ADS Server endpoint
+    Value: !Sub https://${ApiGateway}.execute-api.${AWS::Region}.amazonaws.com/${ApiStage}/ads
