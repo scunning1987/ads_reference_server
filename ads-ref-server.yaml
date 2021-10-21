@@ -69,6 +69,11 @@ Resources:
               - logs:PutLogEvents
             Resource:
               - !Sub arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:/aws/lambda/*
+          - Effect: Allow
+            Action:
+              - s3:*
+            Resource:
+              - !Sub arn:aws:s3:::${S3Bucket}/*
 
   LambdaInvokePermissionVAST:
     Type: AWS::Lambda::Permission
@@ -186,7 +191,7 @@ Resources:
               http = urllib3.PoolManager()
 
               # Manifest File containning URL's on github
-              cloudformation_manifest = "https://raw.githubusercontent.com/scunning1987/pois_reference_server/main/manifest.txt"
+              cloudformation_manifest = "https://raw.githubusercontent.com/scunning1987/ads_reference_server/main/manifest.txt"
 
               # Pull global env variable to variable
               bucket = os.environ['BUCKET']
