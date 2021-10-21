@@ -4,6 +4,12 @@ This is a simple ADS reference server that build a VAST response with ads to fil
 
 ![](architecture-aws.png?width=80pc&classes=border,shadow)
 
+## How To Deploy
+
+Use [this](https://raw.githubusercontent.com/scunning1987/ads_reference_server/main/ads-ref-server.yaml) CloudFormation template to deploy the ADS Reference server resources. Once the stack is deployed, you can navigate to the Stack Output tab to see the API endpoint for the ADS server.
+
+
+## How To Use
 There are no required query parameters for this to work. The server can be configured to respond with a default duration if it is missing from the request.
 
 example URL with duration query parameter:
