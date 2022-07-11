@@ -24,14 +24,19 @@ Summary: This script is designed to create a linear HLS playlist using VOD conte
 Original Author: Scott Cunningham
 '''
 
+
+
 import json
 import xmltodict
 import time
+import random
 from xml.sax import saxutils as su
 
 def lambda_handler(event, context):
 
-    default_ad_duration = 30 # Value to use if no duration is sent in the VAST request
+    print(event)
+
+    default_ad_duration = 15 # Value to use if no duration is sent in the VAST request
 
     if event['path'] == "/ads":
 
@@ -42,7 +47,10 @@ def lambda_handler(event, context):
 
             if vast_req_params != None:
                 if 'duration' in vast_req_params:
-                    vast_req_duration = int(vast_req_params['duration'])
+                    if len(vast_req_params['duration']) > 0:
+                        vast_req_duration = int(vast_req_params['duration'])
+                    else:
+                        vast_req_duration = default_ad_duration
                 else:
                     vast_req_duration = default_ad_duration
             else:
@@ -51,15 +59,18 @@ def lambda_handler(event, context):
         else:
             vast_req_duration = default_ad_duration
 
-        if 'assetid' not in vast_req_params:
+        if vast_req_duration == 300:
+            vast_req_duration = default_ad_duration
+
+        if 'assetid' not in vast_req_params or len(vast_req_params['assetid']) == 0:
             # not a VOD VMAP response
 
             avaiable_ads = dict()
-            avaiable_ads["1"] = {"duration_s":15,"location":"https://d3re4i3vgppvr8.cloudfront.net/Media/Bumpers/AD-caribbean-15-HD.mp4","mediafile_name":"AD-caribbean-15-HD","mediafile_id":"00001"}
-            avaiable_ads["2"] = {"duration_s":15,"location":"https://d3re4i3vgppvr8.cloudfront.net/Media/Bumpers/AD-caribbean2-15-HD.mp4","mediafile_name":"AD-caribbean2-15","mediafile_id":"00002"}
-            avaiable_ads["3"] = {"duration_s":15,"location":"https://d3re4i3vgppvr8.cloudfront.net/Media/Bumpers/AD-carracing-15-HD.mp4","mediafile_name":"AD-carracing-15","mediafile_id":"00003"}
-            avaiable_ads["4"] = {"duration_s":15,"location":"https://d3re4i3vgppvr8.cloudfront.net/Media/Bumpers/AD-music-15-HD.mp4","mediafile_name":"AD-music-15","mediafile_id":"00004"}
-            avaiable_ads["5"] = {"duration_s":15,"location":"https://d3re4i3vgppvr8.cloudfront.net/Media/Bumpers/AD-perfume-15-HD.mp4","mediafile_name":"AD-perfume-15","mediafile_id":"00005"}
+            avaiable_ads["5"] = {"duration_s":15,"location":"https://d3re4i3vgppvr8.cloudfront.net/Media/Bumpers/AD-caribbean-15-HD.mp4","mediafile_name":"AD-caribbean-15-HD","mediafile_id":"00001"}
+            avaiable_ads["3"] = {"duration_s":15,"location":"https://d3re4i3vgppvr8.cloudfront.net/Media/Bumpers/AD-caribbean2-15-HD.mp4","mediafile_name":"AD-caribbean2-15","mediafile_id":"00002"}
+            avaiable_ads["1"] = {"duration_s":15,"location":"https://d3re4i3vgppvr8.cloudfront.net/Media/Bumpers/AD-carracing-15-HD.mp4","mediafile_name":"AD-carracing-15","mediafile_id":"00003"}
+            avaiable_ads["2"] = {"duration_s":15,"location":"https://d3re4i3vgppvr8.cloudfront.net/Media/Bumpers/AD-music-15-HD.mp4","mediafile_name":"AD-music-15","mediafile_id":"00004"}
+            avaiable_ads["4"] = {"duration_s":15,"location":"https://d3re4i3vgppvr8.cloudfront.net/Media/Bumpers/AD-perfume-15-HD.mp4","mediafile_name":"AD-perfume-15","mediafile_id":"00005"}
             avaiable_ads["6"] = {"duration_s":15,"location":"https://d3re4i3vgppvr8.cloudfront.net/Media/Bumpers/AD-polarbear-15-HD.mp4","mediafile_name":"AD-polarbear-15","mediafile_id":"00006"}
             avaiable_ads["7"] = {"duration_s":15,"location":"https://d3re4i3vgppvr8.cloudfront.net/Media/Bumpers/AD-robots-15-HD.mp4","mediafile_name":"AD-robots-15","mediafile_id":"00007"}
             avaiable_ads["8"] = {"duration_s":15,"location":"https://d3re4i3vgppvr8.cloudfront.net/Media/Bumpers/AD-skiing-15-HD.mp4","mediafile_name":"AD-skiing-15","mediafile_id":"00008"}
@@ -67,9 +78,14 @@ def lambda_handler(event, context):
             avaiable_ads["10"] = {"duration_s":15,"location":"https://d3re4i3vgppvr8.cloudfront.net/Media/Bumpers/AWSElemental_commerical_break_15s-HD.mp4","mediafile_name":"AWSElemental_commerical_break_15","mediafile_id":"00010"}
             avaiable_ads["11"] = {"duration_s":30,"location":"https://d3re4i3vgppvr8.cloudfront.net/Media/Bumpers/rugby-30-HD.mp4","mediafile_name":"rugby-30","mediafile_id":"00011"}
 
+
             cumulative_duration = 0
             ad_list = []
-            for ad in avaiable_ads:
+            adrange = list(range(1,11))
+            random.shuffle(adrange)
+
+            for ad in adrange:
+                ad = str(ad)
                 sequence_id = ad
                 ad_duration = avaiable_ads[ad]['duration_s']
                 ad_location = avaiable_ads[ad]['location']
@@ -110,13 +126,20 @@ def lambda_handler(event, context):
             # convert payload to xml for return
             vast_xml = xmltodict.unparse(vast_response, short_empty_elements=True, pretty=True, encoding='utf-8')
             vast_xml = su.unescape(vast_xml)
+            vast_type = "vast"
 
         else:
             # This is VOD VMAP
 
             vmap_breaks = []
 
-            vmap_break_times = [15,60]
+            assetid = vast_req_params['assetid']
+            if assetid == "scott1":
+                vmap_break_times = [15,60]
+            elif assetid == "scott2":
+                vmap_break_times = [0,60]
+            else:
+                vmap_break_times = [0,30,60,90,120,150,180]
             for vmap_break in vmap_break_times:
 
                 vmap_break_dict = dict()
@@ -129,33 +152,91 @@ def lambda_handler(event, context):
                 vmap_break_dict['vmap:AdSource']['@followRedirects'] = "true"
                 vmap_break_dict['vmap:AdSource']['vmap:AdTagURI'] = {}
                 vmap_break_dict['vmap:AdSource']['vmap:AdTagURI']['@templateType'] = "vast3"
-                vmap_break_dict['vmap:AdSource']['vmap:AdTagURI']['#text'] = '<![CDATA[%s]]>' % ("https://n8ljfs0h09.execute-api.us-west-2.amazonaws.com/v1/ads?duration=120")
+                vmap_break_dict['vmap:AdSource']['vmap:AdTagURI']['#text'] = '<![CDATA[%s]]>' % ("https://n8ljfs0h09.execute-api.us-west-2.amazonaws.com/v1/ads?duration=15")
 
                 vmap_breaks.append(vmap_break_dict)
 
             vmap_response = dict()
             vmap_response['vmap:VMAP'] = {}
-            vmap_response['vmap:VMAP']['@version'] = "1.0"
+            vmap_response['vmap:VMAP']['@version'] = "3.0"
             vmap_response['vmap:VMAP']['@xmlns:vmap'] = "http://www.iab.net/videosuite/vmap"
             vmap_response['vmap:VMAP']['vmap:AdBreak'] = vmap_breaks
 
             # convert payload to xml for return
             vast_xml = xmltodict.unparse(vmap_response, short_empty_elements=True, pretty=True, encoding='utf-8')
             vast_xml = su.unescape(vast_xml)
+            vast_type = "vmap"
+
+        #print("Response: %s " % (vast_xml) )
 
         return {
             'statusCode': 200,
             "headers": {
-                "Content-Type": "application/xml"
+                "Content-Type": "application/xml",
+                "vast-type":vast_type
             },
             'body': vast_xml
         }
+
+    elif event['path'] == "/vastwrapper":
+
+
+        #return event['queryStringParameters']
+
+
+        base_url = event['requestContext']['domainName']
+        stage = event['requestContext']['stage']
+        query_strings = []
+
+        try:
+            qs_dict = event['queryStringParameters']
+            qs_list = list(qs_dict.keys())
+
+
+            for qs in qs_list:
+                query_strings.append("%s=%s" % (qs,qs_dict[qs]))
+
+        except Exception as e:
+            query_strings = []
+
+
+        if len(query_strings) > 0:
+            query_strings_string = '&'.join(query_strings)
+            query_strings_string = "?" + query_strings_string
+
+
+        vast_tag_uri = "https://%s/%s/ads%s" % (base_url,stage,query_strings_string)
+
+        wrapper = dict()
+        wrapper['VAST'] = {}
+        wrapper['VAST']['@version'] = "3.0"
+        wrapper['VAST']['Ad'] = {}
+        wrapper['VAST']['Ad']['@sequence'] = "1"
+        wrapper['VAST']['Ad']['Wrapper'] = {}
+        wrapper['VAST']['Ad']['Wrapper']['VASTAdTagURI'] = {}
+        wrapper['VAST']['Ad']['Wrapper']['VASTAdTagURI']['#text'] = '<![CDATA[%s]]>' % (vast_tag_uri)
+
+        # convert payload to xml for return
+        wrapper_xml = xmltodict.unparse(wrapper, short_empty_elements=True, pretty=True, encoding='utf-8')
+        wrapper_xml = su.unescape(wrapper_xml)
+        vast_type = "wrapper"
+
+        #print("Response: %s " % (vast_xml) )
+
+        return {
+            'statusCode': 200,
+            "headers": {
+                "Content-Type": "application/xml",
+                "vast-type":vast_type
+            },
+            'body': wrapper_xml
+        }
+
 
     else:
         # treat this as impression
         return {
             'statusCode': 200,
             "headers": {
-                "Content-Type": "application/xml"
-            }
-        }
+                "Content-Type": "application/xml",
+            }}
