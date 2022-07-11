@@ -3,14 +3,6 @@
 ####
 ####
 
-## Parameters - User Input
-#Parameters:
-#
-#  Placeholder:
-#    Description: placeholder for now...
-#    Type: String
-#    Default: placeholder
-
 ## Resources
 Resources:
 
@@ -18,6 +10,7 @@ Resources:
   ## S3
   #################
   # S3 Bucket to host code
+
   S3Bucket:
     Type: AWS::S3::Bucket
     Properties:
