@@ -473,4 +473,4 @@ Outputs:
     Value: !Sub https://${ApiGateway}.execute-api.${AWS::Region}.amazonaws.com/${ApiStage}/ads?assetid=scott1
   EXAMPLE3:
     Description: Example 3 - ADS call for wrapped response with ads_url query parameter
-    Value: !Sub https://${ApiGateway}.execute-api.${AWS::Region}.amazonaws.com/${ApiStage}/ads?duration=30&ads_url=this-is-the-real-url/v1/ads
+    Value: !Sub https://${ApiGateway}.execute-api.${AWS::Region}.amazonaws.com/${ApiStage}/vastwrapper?duration=30&ads_url=this-is-the-real-url.com/v1/ads
