@@ -4,6 +4,12 @@ This is a simple ADS reference server that build a VAST response with ads to fil
 
 ![](architecture-aws.png?width=80pc&classes=border,shadow)
 
+## Release Notes
+| Date       | Version | Update Notes                                                              |
+|------------|-----|---------------------------------------------------------------------------|
+| 2021-10-21 | 1.0 | Initial release containing support for simple ADS VAST and VMAP responses |
+| 2023-04-24 | 1.1 | Added support for adding a wrapped VAST response                          |
+
 ## How To Deploy
 
 Use [this](https://raw.githubusercontent.com/scunning1987/ads_reference_server/main/ads-ref-server.yaml) CloudFormation template to deploy the ADS Reference server resources. Once the stack is deployed, you can navigate to the Stack Output tab to see the API endpoint for the ADS server.
