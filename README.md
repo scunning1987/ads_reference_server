@@ -8,7 +8,7 @@ This is a simple ADS reference server that build a VAST response with ads to fil
 | Date       | Version | Update Notes                                                              |
 |------------|-----|---------------------------------------------------------------------------|
 | 2021-10-21 | 1.0 | Initial release containing support for simple ADS VAST and VMAP responses |
-| 2023-04-24 | 1.1 | Added support for adding a wrapped VAST response                          |
+| 2023-04-24 | 1.1 | Added support for invoking a wrapped VAST response                        |
 
 ## How To Deploy
 
