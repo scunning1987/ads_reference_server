@@ -102,3 +102,9 @@ This is an example of what the dictionary object looks like and the type of data
   }
 }
 ```
+
+On the CloudFormation **Outputs** section, there are 3 examples to show 3 different ADS functions:
+
+* VAST request and response for linear use cases (pass a *duration* query parameter)
+* VAST request and VMAP response for VOD use cases (pass a *assetid* query parameter)
+* VAST request and wrapper response for Ad request redirects (change the path to `/vastwrapper` and pass query parameter *ads_url*)
