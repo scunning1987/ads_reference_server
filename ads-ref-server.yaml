@@ -465,3 +465,12 @@ Outputs:
   ADSVASTURL:
     Description: This is the endpoint to configure as your ADS Server endpoint
     Value: !Sub https://${ApiGateway}.execute-api.${AWS::Region}.amazonaws.com/${ApiStage}/ads
+  EXAMPLE1:
+    Description: Example 1 - ADS call with duration query parameter
+    Value: !Sub https://${ApiGateway}.execute-api.${AWS::Region}.amazonaws.com/${ApiStage}/ads?duration=30
+  EXAMPLE2:
+    Description: Example 2 - ADS call with assetid query parameter to return VMAP (VOD)
+    Value: !Sub https://${ApiGateway}.execute-api.${AWS::Region}.amazonaws.com/${ApiStage}/ads?assetid=scott1
+  EXAMPLE3:
+    Description: Example 3 - ADS call for wrapped response with ads_url query parameter
+    Value: !Sub https://${ApiGateway}.execute-api.${AWS::Region}.amazonaws.com/${ApiStage}/ads?duration=30&ads_url=this-is-the-real-url/v1/ads
