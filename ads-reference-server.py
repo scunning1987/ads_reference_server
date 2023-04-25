@@ -24,17 +24,17 @@ Summary: This script is designed to create a linear HLS playlist using VOD conte
 Original Author: Scott Cunningham
 '''
 
-
-
 import json
 import xmltodict
 import time
 import random
 from xml.sax import saxutils as su
+from urllib.parse import urlencode
+import urllib
 
 def lambda_handler(event, context):
 
-    print(event)
+    print(json.dumps(event))
 
     default_ad_duration = 15 # Value to use if no duration is sent in the VAST request
 
@@ -55,6 +55,7 @@ def lambda_handler(event, context):
                     vast_req_duration = default_ad_duration
             else:
                 vast_req_duration = default_ad_duration
+                vast_req_params = dict()
 
         else:
             vast_req_duration = default_ad_duration
@@ -194,18 +195,27 @@ def lambda_handler(event, context):
 
 
             for qs in qs_list:
-                query_strings.append("%s=%s" % (qs,qs_dict[qs]))
+                if qs != "ads_url":
+                    query_strings.append("%s=%s" % (urllib.parse.quote_plus(qs),urllib.parse.quote_plus(qs_dict[qs])))
 
         except Exception as e:
             query_strings = []
 
 
+        query_strings_string = ""
         if len(query_strings) > 0:
             query_strings_string = '&'.join(query_strings)
             query_strings_string = "?" + query_strings_string
 
+        if "ads_url" in list(qs_dict.keys()):
 
-        vast_tag_uri = "https://%s/%s/ads%s" % (base_url,stage,query_strings_string)
+            base_url = qs_dict['ads_url']
+
+        else:
+
+            base_url = "original-request-does-not-contain-ads_url-key"
+
+        vast_tag_uri = "https://%s%s" % (base_url,query_strings_string)
 
         wrapper = dict()
         wrapper['VAST'] = {}
@@ -231,6 +241,7 @@ def lambda_handler(event, context):
             },
             'body': wrapper_xml
         }
+
 
 
     else:
